@@ -17,28 +17,19 @@ class MovieService constructor( val movieRepo: MovieRepo) {
 
     fun findOne(id: Int): Mono<Movie> =
         this.movieRepo.findById(id)
-            .switchIfEmpty(Mono.error(MovieNotFoundException.create(id)))
+            .switchIfEmpty(Mono.error(IllegalArgumentException("Movie not found")))
 
-    fun rate(id: Int, Comment: String, Rating: Int): Mono<Movie> {
+    fun rate(id: Int, comment: String, rating: Int): Mono<Movie> {
         val movieMono: Mono<Movie> = this.findOne(id)
-        return movieMono.switchIfEmpty(Mono.error(MovieNotFoundException.create(id)))
+        return movieMono.switchIfEmpty(Mono.error(IllegalArgumentException("Movie not found")))
             .map { movie ->
-                movie.ratings.add(MovieRating(Comment, Rating, Date()))
+                movie.ratings.add(MovieRating(comment, rating, Date()))
                 movie
             }.publishOn(Schedulers.boundedElastic()).map { movie ->
-                this.save(movie).subscribe()
+                this.movieRepo.save(movie)
+                    .subscribe()
                 movie
             }
-    }
-
-
-    class MovieNotFoundException(message: String) {
-        companion object {
-            fun create(id: Int): MovieNotFoundException {
-                return MovieNotFoundException("Movie by id $id not found")
-            }
-
-        }
     }
 }
 
